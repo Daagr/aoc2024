@@ -9,15 +9,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         .collect();
     let needle = "XMAS";
     // println!("{:?} {}", input, input[0][4]);
-    let count = count_forward(&input, needle);
     // input.reverse();
     // input.iter_mut().for_each(|x| x.reverse());
     // count += count_forward(&input, needle);
-    println!("Count: {}", count);
+    println!("Count 1: {}", count_part1(&input, needle));
+    println!("Count 2: {}", count_part2(&input));
     Ok(())
 }
 
-fn count_forward(input: &Vec<Vec<char>>, needle: &'static str) -> i32 {
+fn count_part1(input: &Vec<Vec<char>>, needle: &'static str) -> i32 {
     let height = input.len();
     let width = input[0].len();
     let mut count = 0;
@@ -132,6 +132,29 @@ fn count_forward(input: &Vec<Vec<char>>, needle: &'static str) -> i32 {
                 }
                 if correct {
                     println!("Correct left from {} {}", x, y);
+                    count += 1;
+                }
+            }
+        }
+    }
+    count
+}
+
+fn count_part2(input: &Vec<Vec<char>>) -> i32 {
+    let height = input.len();
+    let width = input[0].len();
+    let mut count = 0;
+    for y in 1..height - 1 {
+        for x in 1..width - 1 {
+            if input[y][x] == 'A' {
+                let mut a = [
+                    input[y - 1][x - 1],
+                    input[y - 1][x + 1],
+                    input[y + 1][x - 1],
+                    input[y + 1][x + 1],
+                ];
+                a.sort();
+                if a == ['M', 'M', 'S', 'S'] && input[y - 1][x - 1] != input[y + 1][x + 1] {
                     count += 1;
                 }
             }
