@@ -5,8 +5,17 @@ use std::{error::Error, io::BufRead};
 enum Position {
     Obstruction,
     Empty,
-    Visited,
+    Visited(Direction),
 }
+impl Position {
+    fn is_visited(&self) -> bool {
+        match self {
+            Position::Visited(_) => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum Direction {
     Up,
@@ -35,7 +44,7 @@ impl Grid {
                     '^' => {
                         assert_eq!(location, None);
                         location = Some((row.len() as i32, positions.len() as i32));
-                        row.push(Position::Visited);
+                        row.push(Position::Visited(Direction::Up));
                     }
                     _ => unreachable!(),
                 }
@@ -54,7 +63,7 @@ impl Grid {
         let mut n = 0;
         for row in &self.positions {
             for pos in row {
-                if pos == &Position::Visited {
+                if pos.is_visited() {
                     n += 1;
                 }
             }
@@ -98,24 +107,36 @@ impl Grid {
         }
         Position::Empty
     }
-    fn step(&mut self) {
+    /// Returns true if looping
+    fn step(&mut self) -> bool {
         let mut i = 0;
         while self.at(self.next_pos()) == Position::Obstruction {
             self.turn();
             i += 1;
-            if i > 10 {
-                panic!("Infinite turning loop");
+            if i > 5 {
+                return true;
             }
         }
         self.location = self.next_pos();
         if let Some((x, y)) = self.location {
-            self.positions[y as usize][x as usize] = Position::Visited;
+            if let Position::Visited(dir) = self.positions[y as usize][x as usize] {
+                if dir == self.direction {
+                    return true;
+                }
+            } else {
+                self.positions[y as usize][x as usize] = Position::Visited(self.direction);
+            }
         }
+        false
     }
-    fn run(&mut self) {
+    /// Returns true on loop
+    fn run(&mut self) -> bool {
         while self.location.is_some() {
-            self.step();
+            if self.step() {
+                return true;
+            }
         }
+        false
     }
     fn print(&self) {
         for line in &self.positions {
@@ -123,7 +144,7 @@ impl Grid {
                 match p {
                     Position::Obstruction => print!("#"),
                     Position::Empty => print!("."),
-                    Position::Visited => print!("X"),
+                    Position::Visited(_) => print!("X"),
                 }
             }
             println!();
@@ -134,11 +155,38 @@ impl Grid {
 fn main() -> Result<(), Box<dyn Error>> {
     let filename = input_file(false);
     let mut grid = Grid::new(std::fs::File::open(filename)?);
+    let orig_grid = grid.clone();
     //println!("{:?}", grid);
     grid.print();
     println!();
     grid.run();
     grid.print();
     println!("Visited {}", grid.count());
+    let mut stucks = 0;
+    for y in 0..grid.size.1 {
+        for x in 0..grid.size.0 {
+            if grid.at(Some((x as i32, y as i32))).is_visited() {
+                if let Some((x_, y_)) = orig_grid.location {
+                    if x_ as usize != x || y_ as usize != y {
+                        let mut new_grid = orig_grid.clone();
+                        new_grid.positions[y][x] = Position::Obstruction;
+                        if new_grid.run() {
+                            println!("Stuck at ({}, {})", x, y);
+                            stucks += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!("Stucks {}", stucks);
+    /*
+    let mut new_grid = orig_grid.clone();
+    new_grid.positions[6][3] = Position::Obstruction;
+    if new_grid.run() {
+        println!("Stuck???");
+    }
+    new_grid.print();
+    */
     Ok(())
 }
