@@ -1,5 +1,5 @@
 use aoc2024::input_file;
-use std::{error::Error, io::Read};
+use std::{error::Error, io::Read, mem::swap};
 
 fn try_split_num(n: u64) -> Option<(u64, u64)> {
     let digits = n.ilog10() + 1;
@@ -24,6 +24,8 @@ mod tests {
     }
 }
 
+/// Used for part 1
+#[allow(dead_code)]
 fn blink(nums: &[u64]) -> Vec<u64> {
     let mut out = Vec::new();
     for n in nums {
@@ -39,16 +41,104 @@ fn blink(nums: &[u64]) -> Vec<u64> {
     out
 }
 
+fn blink_one(num: u64) -> (u64, Option<u64>) {
+    if num == 0 {
+        (1, None)
+    } else if let Some((a, b)) = try_split_num(num) {
+        (a, Some(b))
+    } else {
+        (2024 * num, None)
+    }
+}
+
+/// faster for part 1 but not fast enough for part 2
+#[allow(dead_code)]
+fn stonecount(num: u64, blinks: u64) -> u64 {
+    if blinks == 0 {
+        return 1;
+    }
+    if num == 0 {
+        return stonecount(1, blinks - 1);
+    }
+    if let Some((a, b)) = try_split_num(num) {
+        return stonecount(a, blinks - 1) + stonecount(b, blinks - 1);
+    }
+    return stonecount(2024 * num, blinks - 1);
+}
+
+#[derive(Debug, Copy, Clone)]
+struct Stone {
+    mul: u64,
+    num: u64,
+    blinks: u64,
+}
+
+fn stonecount2(nums: &[u64], blinks: u64) -> u64 {
+    let mut todo = nums
+        .iter()
+        .map(|num| Stone {
+            mul: 1,
+            num: *num,
+            blinks,
+        })
+        .collect::<Vec<_>>();
+    let mut todo_ = Vec::new();
+    while !todo.iter().all(|s| s.blinks == 0) {
+        todo.sort_by_key(|s| (s.blinks, s.num));
+        todo_.clear();
+
+        // dedup:
+        let mut elem = todo.pop().unwrap();
+        while let Some(other) = todo.pop() {
+            if elem.num == other.num && elem.blinks == other.blinks {
+                elem.mul += other.mul;
+            } else {
+                todo_.push(elem);
+                elem = other;
+            }
+        }
+        todo_.push(elem);
+
+        swap(&mut todo, &mut todo_);
+        todo.reverse();
+        elem = todo.pop().unwrap();
+        //println!("blinking {:?}", elem);
+        assert_ne!(elem.blinks, 0);
+        let (a, b) = blink_one(elem.num);
+        todo.push(Stone {
+            mul: elem.mul,
+            num: a,
+            blinks: elem.blinks - 1,
+        });
+        if let Some(a) = b {
+            todo.push(Stone {
+                mul: elem.mul,
+                num: a,
+                blinks: elem.blinks - 1,
+            });
+        }
+    }
+
+    let mut sum = 0;
+    for stone in todo {
+        sum += stone.mul;
+        assert_eq!(stone.blinks, 0);
+    }
+    sum
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
-    let filename = input_file(true);
+    let filename = input_file(false);
     let mut buf = String::new();
     std::fs::File::open(filename)?.read_to_string(&mut buf)?;
-    let mut nums: Vec<u64> = buf.split_whitespace().map(|x| x.parse().unwrap()).collect();
-    println!("{:?}", nums);
-    for _ in 0..25 {
-        nums = blink(&nums);
-    }
-    println!("Numbercount at 25: {}", nums.len());
+    let nums: Vec<u64> = buf.split_whitespace().map(|x| x.parse().unwrap()).collect();
+
+    let count = stonecount2(&nums, 25);
+
+    println!("Numbercount at 25: {}", count);
+
+    let count2 = stonecount2(&nums, 75);
+    println!("Numbercount at 75: {}", count2);
 
     Ok(())
 }
