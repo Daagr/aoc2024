@@ -24,23 +24,6 @@ mod tests {
     }
 }
 
-/// Used for part 1
-#[allow(dead_code)]
-fn blink(nums: &[u64]) -> Vec<u64> {
-    let mut out = Vec::new();
-    for n in nums {
-        if *n == 0 {
-            out.push(1);
-        } else if let Some((a, b)) = try_split_num(*n) {
-            out.push(a);
-            out.push(b);
-        } else {
-            out.push(*n * 2024);
-        }
-    }
-    out
-}
-
 fn blink_one(num: u64) -> (u64, Option<u64>) {
     if num == 0 {
         (1, None)
@@ -51,21 +34,6 @@ fn blink_one(num: u64) -> (u64, Option<u64>) {
     }
 }
 
-/// faster for part 1 but not fast enough for part 2
-#[allow(dead_code)]
-fn stonecount(num: u64, blinks: u64) -> u64 {
-    if blinks == 0 {
-        return 1;
-    }
-    if num == 0 {
-        return stonecount(1, blinks - 1);
-    }
-    if let Some((a, b)) = try_split_num(num) {
-        return stonecount(a, blinks - 1) + stonecount(b, blinks - 1);
-    }
-    return stonecount(2024 * num, blinks - 1);
-}
-
 #[derive(Debug, Copy, Clone)]
 struct Stone {
     mul: u64,
@@ -73,7 +41,7 @@ struct Stone {
     blinks: u64,
 }
 
-fn stonecount2(nums: &[u64], blinks: u64) -> u64 {
+fn stonecount(nums: &[u64], blinks: u64) -> u64 {
     let mut todo = nums
         .iter()
         .map(|num| Stone {
@@ -102,7 +70,6 @@ fn stonecount2(nums: &[u64], blinks: u64) -> u64 {
         swap(&mut todo, &mut todo_);
         todo.reverse();
         elem = todo.pop().unwrap();
-        //println!("blinking {:?}", elem);
         assert_ne!(elem.blinks, 0);
         let (a, b) = blink_one(elem.num);
         todo.push(Stone {
@@ -133,12 +100,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     std::fs::File::open(filename)?.read_to_string(&mut buf)?;
     let nums: Vec<u64> = buf.split_whitespace().map(|x| x.parse().unwrap()).collect();
 
-    let count = stonecount2(&nums, 25);
-
-    println!("Numbercount at 25: {}", count);
-
-    let count2 = stonecount2(&nums, 75);
-    println!("Numbercount at 75: {}", count2);
+    println!("Numbercount at 25: {}", stonecount(&nums, 25));
+    println!("Numbercount at 75: {}", stonecount(&nums, 75));
 
     Ok(())
 }
