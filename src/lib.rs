@@ -1,8 +1,31 @@
-pub fn input_file(example: bool) -> std::path::PathBuf {
+pub enum IsExample {
+    No,
+    Yes(i8),
+}
+impl Into<IsExample> for bool {
+    fn into(self) -> IsExample {
+        if self {
+            IsExample::Yes(0)
+        } else {
+            IsExample::No
+        }
+    }
+}
+
+pub fn input_file(example: impl Into<IsExample>) -> std::path::PathBuf {
     let exe = std::env::current_exe().unwrap();
     let project_dir = exe.ancestors().nth(2 /* 3? */).unwrap();
     let day = exe.file_stem().unwrap();
-    let example = if example { "example" } else { "" };
+    //let example = if example { "example" } else { "" };
+    let example = match example.into() {
+        IsExample::No => "".to_string(),
+        IsExample::Yes(0) => "example".to_string(),
+        IsExample::Yes(n) => {
+            let mut s = "example".to_string();
+            s.push_str(&n.to_string());
+            s
+        }
+    };
     project_dir
         .join("data")
         .join(format!("{}{}.txt", day.to_string_lossy(), example))
